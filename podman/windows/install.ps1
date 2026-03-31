@@ -257,18 +257,11 @@ function Wait-PodmanReady {
     $start = Get-Date
     while (((Get-Date) - $start).TotalSeconds -lt $TimeoutSeconds) {
         try {
-            $machineJson = podman machine list --format json 2>$null
-            if (-not [string]::IsNullOrWhiteSpace($machineJson)) {
-                $machines = $machineJson | ConvertFrom-Json
-                $runningMachine = $machines | Where-Object { $_.Running -eq $true } | Select-Object -First 1
-
-                if ($runningMachine) {
-                    podman info *> $null
-                    if ($LASTEXITCODE -eq 0) {
-                        Write-Success "Podman machine '$($runningMachine.Name)' is running and ready"
-                        return $true
-                    }
-                }
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+            podman info *> $null
+            if ($LASTEXITCODE -eq 0) {
+                Write-Success "Podman is running and ready"
+                return $true
             }
         } catch {
         }
