@@ -552,34 +552,25 @@ function Install-WeixinPlugin {
 
         $oldErrorAction = $ErrorActionPreference
         $ErrorActionPreference = "Continue"
-        $installOutput = podman compose run --rm openclaw-cli plugins install "@tencent-weixin/openclaw-weixin" 2>&1 | Out-String
+
+        # 直接运行不捕获输出，避免破坏 PowerShell 5.1 下的 Console VT100 (ANSI 渲染) 状态
+        podman compose run --rm openclaw-cli plugins install "@tencent-weixin/openclaw-weixin"
         $installExitCode = $LASTEXITCODE
+
         $ErrorActionPreference = $oldErrorAction
 
         if ($installExitCode -ne 0) {
-            if ($installOutput -match "already exists") {
-                Write-Info "Weixin plugin already exists, updating..."
-                podman compose run --rm openclaw-cli plugins update "openclaw-weixin"
-                if ($LASTEXITCODE -ne 0) {
-                    Write-Host "Warning: Weixin plugin update failed" -ForegroundColor Yellow
-                    return $false
-                }
-            } else {
-                Write-Host $installOutput -ForegroundColor Yellow
-                Write-Host "Warning: Weixin plugin installation failed" -ForegroundColor Yellow
+            Write-Info "Weixin plugin install returned an error (might already exist), attempting update..."
+            podman compose run --rm openclaw-cli plugins update "openclaw-weixin"
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host "Warning: Weixin plugin update failed" -ForegroundColor Yellow
                 return $false
             }
         }
 
-        $oldEncoding = [Console]::OutputEncoding
-        [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-
-        podman compose run --rm -it -e FORCE_COLOR=1 openclaw-cli channels login --channel openclaw-weixin
-        $loginExitCode = $LASTEXITCODE
-
-        [Console]::OutputEncoding = $oldEncoding
-
-        if ($loginExitCode -ne 0) {
+        # 使用原本正常的写法，确保二维码渲染正常
+        podman compose run --rm openclaw-cli channels login --channel openclaw-weixin
+        if ($LASTEXITCODE -ne 0) {
             Write-Host "Warning: Weixin channel login failed" -ForegroundColor Yellow
             return $false
         }
