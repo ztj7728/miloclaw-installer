@@ -550,10 +550,20 @@ function Install-WeixinPlugin {
             return $false
         }
 
-        podman compose run --rm openclaw-cli plugins install "@tencent-weixin/openclaw-weixin"
+        $installOutput = podman compose run --rm openclaw-cli plugins install "@tencent-weixin/openclaw-weixin" 2>&1 | Out-String
         if ($LASTEXITCODE -ne 0) {
-            Write-Host "Warning: Weixin plugin installation failed" -ForegroundColor Yellow
-            return $false
+            if ($installOutput -match "already exists") {
+                Write-Info "Weixin plugin already exists, updating..."
+                podman compose run --rm openclaw-cli plugins update "openclaw-weixin"
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Host "Warning: Weixin plugin update failed" -ForegroundColor Yellow
+                    return $false
+                }
+            } else {
+                Write-Host $installOutput -ForegroundColor Yellow
+                Write-Host "Warning: Weixin plugin installation failed" -ForegroundColor Yellow
+                return $false
+            }
         }
 
         podman compose run --rm openclaw-cli channels login --channel openclaw-weixin
