@@ -15,14 +15,14 @@ $OpenClawDir = Join-Path $InstallDir ".openclaw"
 $WorkspaceDir = Join-Path $OpenClawDir "workspace"
 
 # File URLs
-$MiloClawBaseUrl = "https://github.com/ztj7728/miloclaw-installer/raw/refs/heads/main/podman/windows"
+$MiloClawBaseUrl = "https://raw.githubusercontent.com/ztj7728/miloclaw-installer/refs/heads/main/podman/windows"
 $ComposeUrl = "$MiloClawBaseUrl/compose.yml"
 $EnvExampleUrl = "$MiloClawBaseUrl/.env.example"
 $ConfigUrl = "$MiloClawBaseUrl/.openclaw/openclaw.json"
 $StartupBatUrl = "$MiloClawBaseUrl/start-miloclawgateway-podman-compose.bat"
 
 # Gemini skill URLs
-$GeminiSkillBaseUrl = "https://github.com/ztj7728/gemini-image-generation/raw/master"
+$GeminiSkillBaseUrl = "https://raw.githubusercontent.com/ztj7728/gemini-image-generation/refs/heads/main"
 # ============================================================================
 # Utility Functions
 # ============================================================================
