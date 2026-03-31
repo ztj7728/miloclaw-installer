@@ -85,6 +85,7 @@ services:
     user: "node:node"
     volumes:
       - openclaw-config:/home/node/.openclaw
+      - openclaw-workspace:/home/node/.openclaw/workspace
       - ./.openclaw:/tmp
     command: sh -c "cp -r /tmp/* /home/node/.openclaw/ 2>/dev/null || true && echo 'Config copied successfully!'"
     restart: "no"
