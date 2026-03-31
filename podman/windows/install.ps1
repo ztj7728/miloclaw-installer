@@ -1,7 +1,8 @@
 # MiloClaw Installer for Windows - PowerShell 5.1 Compatible
 
 param(
-    [int]$MaxRetries = 3
+    [int]$MaxRetries = 3,
+    [switch]$Weixin
 )
 $ErrorActionPreference = "Stop"
 
@@ -729,8 +730,11 @@ if (-not $pullSuccess) {
 Write-Host ""
 $setupSuccess = Invoke-OpenClawSetup
 Write-Host ""
-$weixinPluginSuccess = Install-WeixinPlugin
-Write-Host ""
+$weixinPluginSuccess = $false
+if ($Weixin) {
+    $weixinPluginSuccess = Install-WeixinPlugin
+    Write-Host ""
+}
 
 $startupBat = Install-StartupBat -InstallDir $InstallDir
 Write-Host ""
