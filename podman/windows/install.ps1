@@ -571,8 +571,15 @@ function Install-WeixinPlugin {
             }
         }
 
-        podman compose run --rm openclaw-cli channels login --channel openclaw-weixin
-        if ($LASTEXITCODE -ne 0) {
+        $oldEncoding = [Console]::OutputEncoding
+        [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+        podman compose run --rm -it -e FORCE_COLOR=1 openclaw-cli channels login --channel openclaw-weixin
+        $loginExitCode = $LASTEXITCODE
+
+        [Console]::OutputEncoding = $oldEncoding
+
+        if ($loginExitCode -ne 0) {
             Write-Host "Warning: Weixin channel login failed" -ForegroundColor Yellow
             return $false
         }
