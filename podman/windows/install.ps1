@@ -550,8 +550,13 @@ function Install-WeixinPlugin {
             return $false
         }
 
+        $oldErrorAction = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
         $installOutput = podman compose run --rm openclaw-cli plugins install "@tencent-weixin/openclaw-weixin" 2>&1 | Out-String
-        if ($LASTEXITCODE -ne 0) {
+        $installExitCode = $LASTEXITCODE
+        $ErrorActionPreference = $oldErrorAction
+
+        if ($installExitCode -ne 0) {
             if ($installOutput -match "already exists") {
                 Write-Info "Weixin plugin already exists, updating..."
                 podman compose run --rm openclaw-cli plugins update "openclaw-weixin"
