@@ -568,9 +568,16 @@ function Install-WeixinPlugin {
             }
         }
 
-        # 使用原本正常的写法，确保二维码渲染正常
-        podman compose run --rm openclaw-cli channels login --channel openclaw-weixin
-        if ($LASTEXITCODE -ne 0) {
+        # 强制开启 TTY 并且使用 Start-Process 绕过 PowerShell 的内置输出捕获，让其直接打印回控制台界面
+        $oldEncoding = [Console]::OutputEncoding
+        [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+        $loginArgs = "compose run --rm -it -e FORCE_COLOR=1 -e TERM=xterm-256color openclaw-cli channels login --channel openclaw-weixin"
+        $proc = Start-Process -FilePath "podman" -ArgumentList $loginArgs -NoNewWindow -Wait -PassThru
+
+        [Console]::OutputEncoding = $oldEncoding
+
+        if ($proc.ExitCode -ne 0) {
             Write-Host "Warning: Weixin channel login failed" -ForegroundColor Yellow
             return $false
         }
