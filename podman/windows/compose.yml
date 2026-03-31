@@ -86,7 +86,7 @@ services:
     volumes:
       - openclaw-config:/home/node/.openclaw
       - ./.openclaw:/tmp
-    command: sh -c "cp /tmp/openclaw.json /home/node/.openclaw/openclaw.json && echo 'Config copied successfully!'"
+    command: sh -c "cp -r /tmp/* /home/node/.openclaw/ 2>/dev/null || true && echo 'Config copied successfully!'"
     restart: "no"
 
 volumes:

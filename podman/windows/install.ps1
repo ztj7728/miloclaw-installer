@@ -1,5 +1,4 @@
 # MiloClaw Installer for Windows - PowerShell 5.1 Compatible
-# Usage: powershell -ExecutionPolicy Bypass -c "irm https://gitee.com/ztj7728/miloclaw/raw/master/scripts/install.ps1 | iex"
 
 param(
     [int]$MaxRetries = 3
@@ -16,15 +15,14 @@ $OpenClawDir = Join-Path $InstallDir ".openclaw"
 $WorkspaceDir = Join-Path $OpenClawDir "workspace"
 
 # File URLs
-$ComposeUrl = "https://gitee.com/ztj7728/miloclaw/raw/master/compose.yml"
-$ComposeEnterUrl = "https://gitee.com/ztj7728/miloclaw/raw/master/compose-enter.yml"
-$EnvExampleUrl = "https://gitee.com/ztj7728/miloclaw/raw/master/.env.example"
-$ConfigUrl = "https://gitee.com/ztj7728/miloclaw/raw/master/.openclaw/openclaw.json"
-$StartupBatUrl = "https://gitee.com/ztj7728/miloclaw/raw/master/scripts/start-miloclawgateway-podman-compose.bat"
+$MiloClawBaseUrl = "https://github.com/ztj7728/miloclaw-installer/raw/refs/heads/main/podman/windows"
+$ComposeUrl = "$MiloClawBaseUrl/compose.yml"
+$EnvExampleUrl = "$MiloClawBaseUrl/.env.example"
+$ConfigUrl = "$MiloClawBaseUrl/.openclaw/openclaw.json"
+$StartupBatUrl = "$MiloClawBaseUrl/start-miloclawgateway-podman-compose.bat"
 
 # Gemini skill URLs
-$GeminiSkillBaseUrl = "https://gitee.com/ztj7728/gemini-image-generation/raw/master"
-
+$GeminiSkillBaseUrl = "https://github.com/ztj7728/gemini-image-generation/raw/master"
 # ============================================================================
 # Utility Functions
 # ============================================================================
@@ -429,7 +427,7 @@ function Initialize-PodmanMachine {
 function Initialize-ProjectFiles {
     Write-Host "Setting up project files..." -ForegroundColor Magenta
 
-    @($InstallDir, $OpenClawDir, $WorkspaceDir) | ForEach-Object {
+    @($InstallDir, $OpenClawDir) | ForEach-Object {
         if (-not (Test-Path $_)) {
             New-Item -ItemType Directory -Force -Path $_ | Out-Null
         }
@@ -437,13 +435,11 @@ function Initialize-ProjectFiles {
     Write-Success "Directory structure created"
 
     $composeFile = Join-Path $InstallDir "compose.yml"
-    $composeEnterFile = Join-Path $InstallDir "compose-enter.yml"
     $envExampleFile = Join-Path $InstallDir ".env.example"
     $envFile = Join-Path $InstallDir ".env"
     $configFile = Join-Path $OpenClawDir "openclaw.json"
 
     Get-FileFromUrl -Url $ComposeUrl -Destination $composeFile
-    Get-FileFromUrl -Url $ComposeEnterUrl -Destination $composeEnterFile
     Get-FileFromUrl -Url $EnvExampleUrl -Destination $envExampleFile
     Get-FileFromUrl -Url $ConfigUrl -Destination $configFile
 
@@ -548,23 +544,26 @@ function Install-WeixinPlugin {
         if (-not (Wait-PodmanReady -TimeoutSeconds 30 -IntervalSeconds 3)) {
             Write-Host "Warning: Podman machine is not ready" -ForegroundColor Yellow
             Write-Info "You can run plugin install manually later:"
-            Write-Host '  cd $InstallDir' -ForegroundColor Cyan
-            Write-Host '  podman compose -f compose-enter.yml run --rm --user node --entrypoint sh openclaw-enter -c 'npx -y @tencent-weixin/openclaw-weixin-cli@latest install'' -ForegroundColor Cyan
+            Write-Host "  cd $InstallDir" -ForegroundColor Cyan
+            Write-Host '  podman compose run --rm openclaw-cli plugins install "@tencent-weixin/openclaw-weixin"' -ForegroundColor Cyan
+            Write-Host "  podman compose run --rm openclaw-cli channels login --channel openclaw-weixin" -ForegroundColor Cyan
             return $false
         }
 
-        podman compose -f compose-enter.yml run --rm --user node --entrypoint sh openclaw-enter -c 'npx -y @tencent-weixin/openclaw-weixin-cli@latest install'
-
-        if ($LASTEXITCODE -eq 0) {
-            Write-Success "Weixin plugin installed"
-            return $true
-        } else {
+        podman compose run --rm openclaw-cli plugins install "@tencent-weixin/openclaw-weixin"
+        if ($LASTEXITCODE -ne 0) {
             Write-Host "Warning: Weixin plugin installation failed" -ForegroundColor Yellow
-            Write-Info "You can run it manually later:"
-            Write-Host '  cd $InstallDir' -ForegroundColor Cyan
-            Write-Host '  podman compose -f compose-enter.yml run --rm --user node --entrypoint sh openclaw-enter -c 'npx -y @tencent-weixin/openclaw-weixin-cli@latest install'' -ForegroundColor Cyan
             return $false
         }
+
+        podman compose run --rm openclaw-cli channels login --channel openclaw-weixin
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Warning: Weixin channel login failed" -ForegroundColor Yellow
+            return $false
+        }
+
+        Write-Success "Weixin plugin installed and channel logged in"
+        return $true
     } finally {
         Pop-Location
     }
@@ -578,10 +577,11 @@ function Invoke-OpenClawSetup {
     try {
         if (-not (Wait-PodmanReady -TimeoutSeconds 30 -IntervalSeconds 3)) {
             Write-Host "Warning: Podman machine is not ready" -ForegroundColor Yellow
-            Write-Info "You can run setup manually later: cd $InstallDir && podman compose run --rm openclaw-cli setup"
+            Write-Info "You can run setup manually later: cd $InstallDir && podman compose up openclaw-init && podman compose run --rm openclaw-cli setup"
             return $false
         }
 
+        podman compose up openclaw-init
         podman compose run --rm openclaw-cli setup
 
         if ($LASTEXITCODE -eq 0) {
@@ -589,7 +589,7 @@ function Invoke-OpenClawSetup {
             return $true
         } else {
             Write-Host "Warning: Setup failed" -ForegroundColor Yellow
-            Write-Info "You can run it manually: cd $InstallDir && podman compose run --rm openclaw-cli setup"
+            Write-Info "You can run it manually: cd $InstallDir && podman compose up openclaw-init && podman compose run --rm openclaw-cli setup"
             return $false
         }
     } finally {
